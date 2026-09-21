@@ -1,4 +1,4 @@
-# Discord Mass Deleter 🌹
+# Discord Mass Deleter 
 
 A userscript that lets you **mass-delete your own Discord messages** — from a single
 channel or DM, an entire server, or all your open DMs — from a small panel injected into the
