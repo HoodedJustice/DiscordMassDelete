@@ -13,6 +13,82 @@ project aims to follow [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.6] — 2026-09-25
+
+A reliability release. v1.5 could quietly leave messages behind while reporting that it had
+finished; v1.6 rewrites the search and paging engine so a run only ends once every message it can
+delete is gone. Tested against a mock Discord API with 154 automated checks. On the same
+300-message test channel, **v1.5 deleted 112 of 217 deletable messages; v1.6 deleted all 217.**
+
+### ⚠️ Behaviour changes
+
+- **Pinned messages are now kept unless you tick "Include pinned".** The checkbox used to have no
+  effect on normal messages, so pinned messages were always deleted. It now does what it says.
+- **The script file is renamed to `DiscordMassDelete.user.js` and now updates itself** through
+  Tampermonkey / Violentmonkey. If you installed 1.5, remove it and install 1.6 from the link in
+  the README. This is a one-time step; later versions arrive automatically.
+
+### Fixed
+
+- **Replies were never deleted.** Replies are their own message type, and the old filter treated
+  them as system messages and skipped them. The filter now uses Discord's list of deletable types.
+- **Runs ended early and left messages behind.** A message that couldn't be deleted — or one that
+  still showed in Discord's search results just after being deleted — came back on every page, was
+  counted as a failure again, and pushed the run to "finished" too soon. Search now pages by
+  message ID instead of by offset: every message is handled exactly once, search-index lag can't
+  cause repeats, and there is no offset ceiling on very large channels.
+- **One network hiccup or Discord server error ended the whole channel.** Searches and deletes now
+  retry with back-off (up to 5 times) before giving up.
+- **Memory grew on long runs.** The engine is now a loop instead of recursion, so a whole-server
+  run over thousands of pages no longer keeps every page in memory.
+- **"Already deleted" responses were counted as failures.** They now count as deleted.
+- **Stop** takes effect within a fraction of a second, even during a rate-limit wait. Start stays
+  locked (the button reads "Stopping…") until the run has actually wound down, instead of
+  re-enabling immediately and then ignoring clicks.
+- **The log was wiped after every page and its scrollbar was hidden.** It now keeps the last 500
+  lines and shows a thin scrollbar, so earlier pages and per-channel summaries stay readable.
+- **The time estimate never went down.** It's now based on what is left, not the grand total.
+- **Skipped and failed are separate.** Pinned, system and archived-thread messages count as
+  skipped (amber bar) rather than failed (red bar).
+- **The resize corner felt backwards.** The panel is now anchored by its left edge, so the corner
+  follows the mouse, and it's pulled back on-screen if the browser window shrinks.
+- **The token "get" button could fail when opening the panel worked.** Both now use the same
+  detection, with a second fallback method.
+- **Author ID is read straight from the token**, so it no longer depends on Discord's internal
+  modules (those remain as a fallback).
+- **Opening the panel overwrote a hand-typed target.** It now refills the IDs only while
+  "Follow current channel" is on.
+- **Cloudflare handling:** Cloudflare's temporary 502/503 error pages are no longer mistaken for a
+  block (they're retried). Real blocks — 1015 rate limiting and 1020 access denied — stop the
+  whole queue immediately, and so does an invalid or expired token.
+- **Log safety:** API error responses are escaped before being shown in the log.
+
+### Added
+
+- **Live status line** — Deleted · Skipped · Failed · Throttled · ETA, plus "Target 3/12" during
+  bulk runs and an overall summary when they finish.
+- **Clearer bulk confirmations** — "All my open DMs" lists the DMs by name, "Whole server" shows
+  the server's name, and a blank Author ID says "EVERYONE" instead of "you".
+- **Screenshot mode** now also blurs the 📍 location line (it showed server and channel IDs).
+- **Keyboard shortcut:** Ctrl+Alt+Shift+D opens and closes the panel. The toolbar button also
+  works with Enter / Space.
+- **Floating button fallback:** if Discord changes its toolbar and the button can't be placed
+  there, it appears in the bottom-right corner instead, so the panel can always be opened.
+- **Automatic updates** via `@updateURL` / `@downloadURL`.
+- **Discord PTB and Canary** support.
+- The confirmation preview shows display names (no more `name#0`) and shortens long messages.
+- A short pause between targets in bulk runs.
+- `@noframes`, and the toolbar watcher now reacts at most once per frame instead of on every
+  change Discord makes to the page.
+
+### Notes
+
+- The engine intentionally stays on `/api/v6`, where `retry_after` is in milliseconds.
+- Messages that can't be deleted are listed as failed at the end of the run — run it again to
+  retry them.
+
+---
+
 ## [1.5] — 2026-09-21
 
 The biggest release since the fork: a proper **delete-scope switch**, **live channel
